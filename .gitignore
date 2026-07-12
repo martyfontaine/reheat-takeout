@@ -1,0 +1,16 @@
+node_modules/
+bun.lock
+bun.lockb
+*.log
+.DS_Store
+
+# PhotoBridge runtime state (never commit a user's library index or logs)
+/.work/
+/work/
+*.sqlite
+*.sqlite-*
+test/.tmp/
+
+# DaVinci Resolve audio-cache leftovers found in img/ during the 2026-07-12 recovery
+# (not project files — see HANDOFF/RECOVERY notes). Kept on disk, excluded from the repo.
+*.pfl

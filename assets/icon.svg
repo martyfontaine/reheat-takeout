@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#F4A85C"/>
+      <stop offset="1" stop-color="#CB1C22"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFDF8"/>
+      <stop offset="1" stop-color="#F1E5D2"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+
+  <!-- steam -->
+  <g fill="none" stroke="#FFF3E4" stroke-width="17" stroke-linecap="round" opacity="0.5">
+    <path d="M432 300 q-42 -56 0 -112"/>
+    <path d="M512 284 q42 -60 0 -122"/>
+    <path d="M592 300 q-42 -56 0 -112"/>
+  </g>
+
+  <!-- wire handle -->
+  <path d="M374 360 q138 -118 276 0" fill="none" stroke="#C7AC93" stroke-width="12" stroke-linecap="round" opacity="0.85"/>
+
+  <!-- oyster-pail body -->
+  <path d="M300 352 L724 352 L668 812 Q666 828 650 828 L374 828 Q358 828 356 812 Z"
+        fill="url(#paper)" stroke="#CBB199" stroke-width="9"/>
+  <!-- folded lid -->
+  <path d="M286 352 Q512 312 738 352 L726 386 Q512 350 298 386 Z"
+        fill="url(#paper)" stroke="#CBB199" stroke-width="9"/>
+  <!-- red rim -->
+  <path d="M300 386 Q512 350 724 386" fill="none" stroke="#D42E28" stroke-width="12" opacity="0.92"/>
+
+  <!-- maple-leaf emblem (Government-of-Canada 11-point construction) -->
+  <g transform="translate(370,430) scale(2.84)">
+    <path d="M50,2.5 c1.9,7.2 3.4,13.6 8.9,10.7 l-2.2,11.4 c-0.3,1.6 0.5,2 1.6,1.6 l9.4,-2.4 -2.4,7.1 c-0.4,1.2 0.2,1.6 1,1.8 l5.3,1.3 -11.9,9.4 c-1,0.8 -0.6,1.6 -0.2,3 l1,3.3 -11.2,-1.3 c-1.4,-0.2 -2.3,0.5 -2.3,1.6 l0.6,12.2 -3.9,0 0.6,-12.2 c0,-1.1 -0.9,-1.8 -2.3,-1.6 l-11.2,1.3 1,-3.3 c0.4,-1.4 0.8,-2.2 -0.2,-3 l-11.9,-9.4 5.3,-1.3 c0.8,-0.2 1.4,-0.6 1,-1.8 l-2.4,-7.1 9.4,2.4 c1.1,0.4 1.9,0 1.6,-1.6 l-2.2,-11.4 c5.5,2.9 7,-3.5 8.9,-10.7 z" fill="#D42E28"/>
+  </g>
+</svg>

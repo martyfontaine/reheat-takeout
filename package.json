@@ -1,0 +1,40 @@
+{
+  "name": "photobridge",
+  "version": "0.1.0",
+  "description": "macOS daemon that imports Google Takeout into Apple Photos — metadata-correct.",
+  "keywords": [
+    "google-takeout",
+    "apple-photos",
+    "google-photos",
+    "exif",
+    "metadata",
+    "photos",
+    "macos",
+    "launchd",
+    "bun",
+    "photo-migration"
+  ],
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "photobridge": "bin/photobridge.ts"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "photobridge": "bun run bin/photobridge.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}
