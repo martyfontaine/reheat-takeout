@@ -166,7 +166,7 @@ and each fix ships with a regression test. `bun test` and `tsc --noEmit` are gre
 
 **Also hardened / cleaned:** `exiftoolBin()` (absolute-path resolver) is now actually used at both
 exiftool call sites; `status` prints the import counts it advertises; dead branches and a duplicated
-regex removed; dev-only `img/` sources untracked. See `HANDOFF.md` for the full change list.
+regex removed; dev-only `img/` sources untracked. See the commit history for the full change list.
 
 **Known lower-severity items left for a follow-up** (documented, not yet changed): the loopback
 `/recycle` endpoint has no CSRF nonce (short-lived, deletes only config/logs/DB, not photos); the

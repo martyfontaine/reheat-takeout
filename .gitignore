@@ -16,6 +16,10 @@ test/.tmp/
 
 # Walkthrough screenshot SOURCES + DaVinci Resolve audio-cache leftovers (img/).
 # Dev-only inputs, not shipped or referenced by code — kept on disk, out of the repo
-# (per HANDOFF notes; audited 2026-07-12).
+# (audited 2026-07-12).
 /img/
 *.pfl
+
+# Private working notes — kept on disk locally, never committed (this repo is public).
+/ISA.md
+/HANDOFF.md
