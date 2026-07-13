@@ -30,6 +30,31 @@ export function scriptPath(): string {
   return join(import.meta.dir, "..", "bin", "photobridge.ts");
 }
 
+/**
+ * True when running as a `bun build --compile` standalone binary. Such binaries
+ * run their embedded modules from a virtual filesystem rooted at `/$bunfs/`
+ * (`B:\~BUN\` on Windows); the real `bin/*.ts` entry script is not a launchable
+ * path on disk. We detect either signal so launchd can be told to exec correctly.
+ */
+function isCompiledBinary(): boolean {
+  const dir = import.meta.dir;
+  if (dir.includes("/$bunfs/") || dir.includes("~BUN") || dir.startsWith("B:")) return true;
+  return !existsSync(scriptPath());
+}
+
+/**
+ * The ProgramArguments launchd should exec (ISC-49). In dev we run the TypeScript
+ * entry under Bun: `bun <bin/photobridge.ts> run`. A compiled binary, however, gets
+ * a synthetic `/$bunfs/...` script path injected as argv[1]; passing that through
+ * would make the CLI read it as the subcommand and every drop would fail, so we
+ * exec the binary itself with just `run`.
+ */
+export function programArguments(): string[] {
+  return isCompiledBinary()
+    ? [process.execPath, "run"]
+    : [process.execPath, scriptPath(), "run"];
+}
+
 function guiDomain(): string {
   return `gui/${userInfo().uid}`;
 }
