@@ -39,3 +39,20 @@ test("no outbound network primitives in src (ISC-58)", () => {
   }
   expect(offenders).toEqual([]);
 });
+
+/**
+ * The only server Reheat runs is Gene's helper — the loopback bridge that lets his
+ * "Recycle" button uninstall in one click. It must stay bound to 127.0.0.1 so it is
+ * never reachable off-box; this keeps the privacy promise honest for inbound code
+ * too, not just outbound (ISC-58).
+ */
+test("any Bun.serve in src is loopback-bound (Recycle helper)", () => {
+  const offenders: string[] = [];
+  for (const file of walkTs(SRC)) {
+    const text = readFileSync(file, "utf8");
+    if (!/\bBun\.serve\b/.test(text)) continue;
+    if (!/hostname:\s*["']127\.0\.0\.1["']/.test(text)) offenders.push(`${file}: Bun.serve without a 127.0.0.1 hostname`);
+    if (/["']0\.0\.0\.0["']/.test(text)) offenders.push(`${file}: binds 0.0.0.0 (off-box exposure)`);
+  }
+  expect(offenders).toEqual([]);
+});

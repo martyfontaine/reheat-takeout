@@ -28,6 +28,7 @@
   "scripts": {
     "reheat": "bun run bin/reheat.ts",
     "build:app": "bun run scripts/build-app.ts",
+    "build:dmg": "bun run scripts/build-dmg.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },

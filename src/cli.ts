@@ -3,13 +3,17 @@
  * status, logs, doctor. Global flags: --help/-h, --version, --dry-run.
  */
 import { existsSync } from "fs";
-import { readFile, mkdir } from "fs/promises";
-import { walkthroughPath } from "./resources";
+import { readFile, writeFile, mkdir, rm } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
+import { walkthroughPath, assetPath } from "./resources";
 import {
   defaultConfig,
   loadConfig,
   saveConfig,
   configPath,
+  configHome,
+  dataHome,
   hostTimeZone,
   type Config,
 } from "./config";
@@ -32,6 +36,7 @@ COMMANDS
   init         Interactively set the watched inbox folder and write config
   install      Install the launchd LaunchAgent (watches the inbox, runs on drop)
   uninstall    Remove the LaunchAgent
+  recycle      Remove the agent AND clear Reheat's config + logs (your photos stay)
   run          Process any Takeout archives currently in the inbox
   status       Show agent load state and import counts
   logs         Print recent structured log lines
@@ -75,14 +80,47 @@ function spawnDetached(cmd: string[]): void {
   }
 }
 
-/** Open Gene as a chromeless companion window if Chrome is present, else a browser tab. */
-function openGene(htmlPath: string): void {
-  const chromeApp = "/Applications/Google Chrome.app";
-  if (existsSync(chromeApp)) {
-    spawnDetached(["open", "-na", "Google Chrome", "--args", `--app=file://${htmlPath}`, "--window-size=470,780"]);
-  } else {
-    spawnDetached(["open", htmlPath]);
+/** Poll for the helper to report the localhost URL it bound, so we can point Chrome at it. */
+async function waitForUrl(file: string, timeoutMs: number): Promise<string | null> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (existsSync(file)) {
+      try {
+        const u = (await readFile(file, "utf8")).trim();
+        if (u) return u;
+      } catch {
+        /* not fully written yet */
+      }
+    }
+    await new Promise((r) => setTimeout(r, 80));
   }
+  return null;
+}
+
+/**
+ * Open Gene as a chromeless companion window. Preferred path: serve him from a tiny
+ * localhost helper so his "Recycle" button can POST /recycle and actually uninstall
+ * in one click. If Chrome or the helper isn't available we fall back to a plain
+ * file/tab, and Gene's button degrades to on-screen guidance instead of pretending.
+ */
+async function openGene(htmlPath: string): Promise<void> {
+  const chromeApp = "/Applications/Google Chrome.app";
+  if (!existsSync(chromeApp)) {
+    spawnDetached(["open", htmlPath]);
+    return;
+  }
+  try {
+    const urlFile = join(tmpdir(), `reheat-gene-${process.pid}-${Date.now()}.url`);
+    spawnDetached(daemon.selfCommand(["gene-server", urlFile]));
+    const url = await waitForUrl(urlFile, 4000);
+    if (url) {
+      spawnDetached(["open", "-na", "Google Chrome", "--args", `--app=${url}`, "--window-size=1080,1920"]);
+      return;
+    }
+  } catch {
+    /* fall through to plain file mode */
+  }
+  spawnDetached(["open", "-na", "Google Chrome", "--args", `--app=file://${htmlPath}`, "--window-size=1080,1920"]);
 }
 
 /** The double-click experience: set up the drop folder, daemon, and open Gene beside Takeout. */
@@ -105,7 +143,7 @@ async function cmdOnboard(): Promise<number> {
 
   spawnDetached(["open", cfg.inboxDir]); // show the human their drop folder
   const gene = walkthroughPath();
-  if (existsSync(gene)) openGene(gene); // Gene, the guide
+  if (existsSync(gene)) await openGene(gene); // Gene, the guide
   spawnDetached(["open", "https://takeout.google.com/settings/takeout"]); // Google Takeout
 
   console.log("\nGene will walk you through it. Drop your Takeout .zip in the Reheat folder when it's ready.");
@@ -125,6 +163,75 @@ async function cmdInstall(): Promise<number> {
 async function cmdUninstall(): Promise<number> {
   const { removed } = await daemon.uninstall();
   console.log(removed ? "Uninstalled LaunchAgent and removed plist." : "No plist found; agent booted out if present.");
+  return 0;
+}
+
+/**
+ * Full "Recycle" cleanup: stop the background agent and clear Reheat's own config
+ * and logs. Deliberately leaves the user's photos, the ~/Reheat drop folder, and
+ * the app bundle (a running binary can't tidily delete itself — that's a Trash drag).
+ */
+async function recycleCleanup(): Promise<{ agentRemoved: boolean; cleared: string[] }> {
+  const { removed } = await daemon.uninstall();
+  const cleared: string[] = [];
+  for (const dir of [configHome(), dataHome()]) {
+    if (existsSync(dir)) {
+      await rm(dir, { recursive: true, force: true });
+      cleared.push(dir);
+    }
+  }
+  return { agentRemoved: removed, cleared };
+}
+
+async function cmdRecycle(): Promise<number> {
+  const { agentRemoved, cleared } = await recycleCleanup();
+  console.log(agentRemoved ? "Stopped the background agent." : "No background agent was installed.");
+  console.log(`Cleared ${cleared.length} data folder(s): config + logs.`);
+  console.log("Your photos and your Reheat folder are untouched. To finish, drag Reheat.app to the Trash.");
+  return 0;
+}
+
+/**
+ * Hidden helper spawned by `onboard`: serve Gene from localhost so his "Recycle"
+ * button can POST /recycle and run the cleanup for real. Bound to 127.0.0.1 on an
+ * ephemeral port; self-exits after a successful recycle or a spell of inactivity.
+ */
+async function cmdGeneServer(urlFile: string | undefined): Promise<number> {
+  if (!urlFile) {
+    console.error("gene-server: missing url-file argument");
+    return 2;
+  }
+  const html = await readFile(walkthroughPath(), "utf8");
+  const IDLE_MS = 20 * 60 * 1000;
+  let idle: ReturnType<typeof setTimeout>;
+  const bump = () => {
+    clearTimeout(idle);
+    idle = setTimeout(() => process.exit(0), IDLE_MS);
+  };
+  const fileResponse = (path: string, type: string) =>
+    new Response(Bun.file(path), { headers: { "content-type": type } });
+
+  // Bun.serve's inbound request handler (loopback only — this is NOT an outbound
+  // fetch; Reheat still makes zero outbound connections, ISC-58).
+  const onRequest = async (req: Request): Promise<Response> => {
+    bump();
+    const { pathname } = new URL(req.url);
+    if (req.method === "POST" && pathname === "/recycle") {
+      await recycleCleanup();
+      setTimeout(() => process.exit(0), 400); // let the response flush, then exit
+      return Response.json({ ok: true });
+    }
+    if (pathname === "/") {
+      return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });
+    }
+    if (pathname === "/assets/pop.mp3") return fileResponse(assetPath("pop.mp3"), "audio/mpeg");
+    if (pathname === "/assets/chime.mp3") return fileResponse(assetPath("chime.mp3"), "audio/mpeg");
+    return new Response("not found", { status: 404 });
+  };
+  const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: onRequest });
+  bump();
+  await writeFile(urlFile, `http://127.0.0.1:${server.port}/`);
+  await new Promise<void>(() => {}); // serve until /recycle or the idle timer exits us
   return 0;
 }
 
@@ -207,6 +314,11 @@ export async function main(argv: string[]): Promise<number> {
     case "init": return cmdInit();
     case "install": return cmdInstall();
     case "uninstall": return cmdUninstall();
+    case "recycle": return cmdRecycle();
+    case "gene-server": {
+      const rest = args.filter((a) => !a.startsWith("-"));
+      return cmdGeneServer(rest[rest.indexOf("gene-server") + 1]);
+    }
     case "run": return cmdRun(dryRun);
     case "status": return cmdStatus();
     case "logs": return cmdLogs();

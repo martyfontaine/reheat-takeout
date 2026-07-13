@@ -49,10 +49,15 @@ function isCompiledBinary(): boolean {
  * would make the CLI read it as the subcommand and every drop would fail, so we
  * exec the binary itself with just `run`.
  */
-export function programArguments(): string[] {
+/** argv that re-invokes this same Reheat (compiled binary or dev script) with `args`. */
+export function selfCommand(args: string[]): string[] {
   return isCompiledBinary()
-    ? [process.execPath, "run"]
-    : [process.execPath, scriptPath(), "run"];
+    ? [process.execPath, ...args]
+    : [process.execPath, scriptPath(), ...args];
+}
+
+export function programArguments(): string[] {
+  return selfCommand(["run"]);
 }
 
 function guiDomain(): string {
