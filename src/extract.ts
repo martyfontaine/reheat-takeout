@@ -11,7 +11,7 @@
  */
 import { mkdtemp, rm, mkdir, readdir, rename } from "fs/promises";
 import { basename, dirname, join } from "path";
-import { existsSync } from "fs";
+import { existsSync, statSync } from "fs";
 
 export type ArchiveKind = "zip" | "tgz";
 
@@ -22,7 +22,94 @@ export function classifyArchive(path: string): ArchiveKind | null {
   return null;
 }
 
-const MULTIPART_RE = /^(.*?)-(\d{3})\.zip$/i;
+// ---------- Decompression-bomb guard (untrusted archives auto-fire the daemon) ----------
+
+const MAX_ARCHIVE_ENTRIES = 2_000_000; // sane ceiling on files in a Takeout
+const FREE_SPACE_HEADROOM = 2 * 1024 ** 3; // keep at least 2 GiB free after extraction
+const MAX_GZIP_RATIO = 1100; // gzip's theoretical max is ~1032:1 — bound tgz expansion
+
+export interface ArchiveStats {
+  entries: number;
+  /** Declared/estimated uncompressed size in bytes, or null if undeterminable. */
+  uncompressedBytes: number | null;
+}
+
+export interface ExtractionLimits {
+  maxEntries: number;
+  freeHeadroomBytes: number;
+}
+
+export const DEFAULT_EXTRACTION_LIMITS: ExtractionLimits = {
+  maxEntries: MAX_ARCHIVE_ENTRIES,
+  freeHeadroomBytes: FREE_SPACE_HEADROOM,
+};
+
+/**
+ * Pure guard: is it safe to expand `stats` given `freeBytes` free? Rejects archives
+ * with an absurd entry count or that would (by declared/estimated size) fill the disk.
+ * `freeBytes <= 0` means "couldn't determine free space" — the size check is skipped
+ * (the entry cap still applies and a real ENOSPC still fails the extraction).
+ */
+export function checkExtractionLimits(
+  stats: ArchiveStats,
+  freeBytes: number,
+  limits: ExtractionLimits = DEFAULT_EXTRACTION_LIMITS,
+): { ok: boolean; reason?: string } {
+  if (stats.entries > limits.maxEntries) {
+    return { ok: false, reason: `archive has ${stats.entries} entries (cap ${limits.maxEntries})` };
+  }
+  if (
+    stats.uncompressedBytes !== null &&
+    freeBytes > 0 &&
+    stats.uncompressedBytes + limits.freeHeadroomBytes > freeBytes
+  ) {
+    return {
+      ok: false,
+      reason: `expands to ~${stats.uncompressedBytes} bytes but only ${freeBytes} free (need ${limits.freeHeadroomBytes} headroom)`,
+    };
+  }
+  return { ok: true };
+}
+
+/** Available bytes on the volume holding `dir` (via df; 0 if undeterminable). */
+export async function freeSpaceBytes(dir: string): Promise<number> {
+  try {
+    const proc = Bun.spawn(["df", "-Pk", dir], { stdout: "pipe", stderr: "ignore" });
+    const [out] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+    const line = out.trim().split("\n")[1] ?? "";
+    const availKb = Number.parseInt(line.split(/\s+/)[3] ?? "", 10);
+    return Number.isFinite(availKb) ? availKb * 1024 : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Inspect an archive's entry count + uncompressed size WITHOUT extracting it. */
+export async function archiveStats(path: string, kind: ArchiveKind): Promise<ArchiveStats> {
+  if (kind === "zip") {
+    // `unzip -l` prints a footer: "<totalUncompressedBytes>   <count> files".
+    const proc = Bun.spawn(["unzip", "-l", path], { stdout: "pipe", stderr: "ignore" });
+    const [out] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+    const m = out.match(/^\s*(\d+)\s+(\d+)\s+files?\s*$/m);
+    if (m) return { uncompressedBytes: Number(m[1]), entries: Number(m[2]) };
+    return { uncompressedBytes: null, entries: 0 }; // couldn't parse — degrade to entry-less
+  }
+  // tgz: count entries; bound expansion by gzip's max ratio rather than trusting
+  // per-entry sizes (a single gzip stream can't inflate beyond ~1032:1).
+  const proc = Bun.spawn(["tar", "-tzf", path], { stdout: "pipe", stderr: "ignore" });
+  const [out] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+  const entries = out.split("\n").filter((l) => l.length > 0).length;
+  let compressed = 0;
+  try {
+    compressed = statSync(path).size;
+  } catch {
+    /* ignore */
+  }
+  return { entries, uncompressedBytes: compressed > 0 ? compressed * MAX_GZIP_RATIO : null };
+}
+
+/** Multi-part Takeout zip naming: `<prefix>-001.zip`, `-002.zip`, … */
+export const MULTIPART_RE = /^(.*?)-(\d{3})\.zip$/i;
 
 /** All sibling parts of a multi-part Takeout set (or just [archivePath]). */
 export async function multipartSiblings(archivePath: string): Promise<string[]> {
@@ -80,6 +167,10 @@ export async function extractArchive(archivePath: string, workRoot: string): Pro
     for (const part of parts) {
       const pk = classifyArchive(part);
       if (!pk) throw new Error(`unsupported part: ${part}`);
+      // Bomb guard: refuse an archive that would fill the disk or has an absurd entry
+      // count BEFORE handing it to ditto/tar (the daemon extracts untrusted archives).
+      const check = checkExtractionLimits(await archiveStats(part, pk), await freeSpaceBytes(workRoot));
+      if (!check.ok) throw new Error(`refusing to extract ${basename(part)}: ${check.reason}`);
       await runExtract(part, pk, tmp);
     }
     const finalDir = join(workRoot, stableName(archivePath));

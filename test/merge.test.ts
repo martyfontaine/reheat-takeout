@@ -49,6 +49,7 @@ describe("merge writes real EXIF and it reads back (ISC-25/26/28/33/34)", () => 
       const out = await mergeBatch([item], "UTC");
       expect(out.written).toBe(1);
       expect(out.errors).toEqual([]);
+      expect(out.importable).toEqual([file]); // merged → safe to import
 
       const tags = await readTags(file, [
         "DateTimeOriginal",

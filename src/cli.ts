@@ -18,6 +18,7 @@ import {
   type Config,
 } from "./config";
 import { createLogger } from "./log";
+import { StateStore } from "./state";
 import { run as runPipeline } from "./pipeline";
 import { runDoctor } from "./doctor";
 import { runICloudAction } from "./icloud";
@@ -255,6 +256,18 @@ async function cmdStatus(): Promise<number> {
   console.log(`agent:  ${st.loaded ? "loaded" : "not loaded"} (${daemon.agentLabel()})`);
   console.log(`inbox:  ${cfg.inboxDir}`);
   console.log(`db:     ${cfg.dbPath}`);
+  // Import counts (as promised in USAGE). Only open an existing DB — never create one
+  // as a side effect of `status`.
+  if (existsSync(cfg.dbPath)) {
+    const store = await StateStore.open(cfg.dbPath);
+    try {
+      console.log(`counts: imported=${store.importedCount()} unmatched=${store.unmatchedCount()}`);
+    } finally {
+      store.close();
+    }
+  } else {
+    console.log("counts: imported=0 unmatched=0 (no imports yet)");
+  }
   if (st.loaded) console.log(st.detail);
   return 0;
 }
@@ -305,7 +318,7 @@ export async function main(argv: string[]): Promise<number> {
   const cmd = args.find((a) => !a.startsWith("-"));
   if (!cmd || args.includes("-h") || args.includes("--help")) {
     console.log(USAGE);
-    return cmd ? 0 : args.length === 0 ? 0 : 0;
+    return 0;
   }
   const dryRun = args.includes("--dry-run");
 

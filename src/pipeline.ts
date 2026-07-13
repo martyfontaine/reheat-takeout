@@ -12,7 +12,7 @@ import { basename, join } from "path";
 import { existsSync, statSync } from "fs";
 import type { Config } from "./config";
 import type { Logger } from "./log";
-import { classifyArchive, extractArchive } from "./extract";
+import { classifyArchive, extractArchive, MULTIPART_RE } from "./extract";
 import { isTakeoutTree } from "./scan";
 import { TakeoutSource } from "./source/takeout";
 import { ApplePhotosSink } from "./sink/applephotos";
@@ -37,7 +37,6 @@ export interface RunSummary {
   failed: number;
 }
 
-const MULTIPART_RE = /^(.*?)-(\d{3})\.zip$/i;
 const STALE_LOCK_MS = 6 * 60 * 60 * 1000;
 const STABLE_WAIT_MS = 1500; // an archive must hold its size across this window before we touch it
 
@@ -176,12 +175,19 @@ export async function run(cfg: Config, logger: Logger, opts: RunOptions): Promis
         // Merge true metadata into the files (batched, single exiftool process).
         const merge = await mergeBatch(toImport, cfg.displayTimeZone);
         summary.merged += merge.written;
-        for (const e of merge.errors) await logger.error("merge.error", e);
+        // A file whose merge failed is a failure, NOT a silent import: count it and
+        // keep it out of the sink so we never import a photo lacking the metadata that
+        // is this product's whole promise (it stays in the inbox and retries next run).
+        for (const e of merge.errors) {
+          summary.failed++;
+          await logger.error("merge.error", e);
+        }
 
-        // Import, then record ONLY what the sink confirmed (record-after-confirm).
+        // Import ONLY what merged (or had nothing to write), then record ONLY what the
+        // sink confirmed (record-after-confirm).
         const sink = new ApplePhotosSink();
         const byPath = new Map(toImport.map((i) => [i.path, i]));
-        const importResult = await sink.importFiles(toImport.map((i) => i.path), { dryRun: false });
+        const importResult = await sink.importFiles(merge.importable, { dryRun: false });
         for (const p of importResult.imported) {
           const item = byPath.get(p);
           if (item) {

@@ -34,8 +34,14 @@ This audit was performed on the code itself and is complemented by an earlier in
 | F2 | Archive extraction path traversal / symlink escape (zip-slip) | High *(if present)* | **Verified NOT vulnerable** + regression-tested |
 | F3 | Malformed sidecar aborts the entire import (availability) | Low | **Fixed** |
 | F4 | exiftool parser CVE exposure (untrusted media) | Informational | **Documented** + version surfaced in `doctor` |
-| F5 | Media filename could be read as an exiftool option | Low | **Mitigated** (absolute paths) |
+| F5 | Media filename read as an exiftool option — incl. **newline/option injection** via the `-@` argfile | Medium | **Fixed 2026-07-12** (reject control-char paths) |
 | F6 | Corrupt `config.json` yields a raw parse error | Informational | Accepted |
+| F7 | Decompression bomb (zip/tar) fills the disk via the auto-firing daemon | Medium | **Fixed 2026-07-12** (pre-extract entry/size/free-space caps) |
+
+> **2026-07-12 follow-up audit** (manual re-review + independent `codex` cross-check) revised
+> F5 and added F7; details in the dated section below. Two correctness defects found in the same
+> pass (silent import of merge-failed files; duplicate risk on a partial Photos batch) are fixed
+> and documented there as well.
 
 ---
 
@@ -86,9 +92,40 @@ exiftool parses untrusted media and has historically had parser CVEs (e.g. CVE-2
 - `doctor` now reports the installed exiftool **version** with a reminder to keep it current.
 - Recommendation: users on outdated exiftool should update (`brew upgrade exiftool`).
 
-### F5 — Filename interpreted as an exiftool option (Low, Mitigated)
+### F5 — Filename interpreted as an exiftool option (Medium, Fixed 2026-07-12)
 
-exiftool arg-files treat each line as one argument; a media file named `-something.jpg` could in principle be read as an option rather than a target. **Mitigated** because Reheat always writes **absolute** paths (derived from the extraction root), which begin with `/` and are unambiguously filenames. No action required; noted for future maintainers who might introduce relative paths.
+exiftool arg-files (`-@`) treat **each line as one argument**. The original review reasoned this
+was mitigated because Reheat writes **absolute** paths that begin with `/`. The 2026-07-12 re-audit
+found that reasoning incomplete: it assumes a path is a **single line**. A filename inside a hostile
+archive can contain an embedded **newline**; when that path is written into the argfile it splits
+across lines, and a resulting line beginning with `-` is read by exiftool as an **option**
+(option injection), not a file. The same function already collapses newlines in the *caption* for
+exactly this reason (`merge.ts`), but the *path* was not guarded.
+
+- **Impact:** exiftool option injection from a crafted archive filename — e.g. stray `-o`/`-w`
+  output writes or metadata wipes. **Not** demonstrated RCE: the `-config`→Perl vector requires
+  `-config` to be the first CLI argument, which the argfile/`-execute` structure prevents.
+  A genuine Google Takeout never contains control-character filenames.
+- **Fix:** `mergeBatch` rejects any item whose path contains `\r`/`\n`, reporting it as an error and
+  keeping it out of both the merge and the import (it is neither written nor sent to Photos).
+- **Regression test:** `security.test.ts` → "F5 — a media filename with a newline cannot inject
+  exiftool options" (asserts the item is not written, not importable, and reported in `errors`).
+
+### F7 — Decompression bomb fills the disk (Medium, Fixed 2026-07-12)
+
+Extraction ran `ditto`/`tar` on an untrusted archive with **no** size, entry-count, or free-space
+limit. Because the launchd daemon auto-fires on a dropped archive, a zip/tar bomb (tiny compressed,
+astronomically large uncompressed) could fill the startup disk unattended — an availability/DoS defect.
+
+- **Fix:** before each extraction, `extract.ts` inspects the archive (`archiveStats`: `unzip -l` for
+  zips; entry count × gzip's ~1032:1 max ratio for tgz) and refuses via a pure, unit-tested guard
+  (`checkExtractionLimits`) if the entry count exceeds a cap or the estimated expansion would leave
+  less than a free-space headroom. A real `ENOSPC` mid-extract remains a backstop, and the temp dir
+  is cleaned on failure.
+- **Residual:** a malicious zip that *understates* its uncompressed size in local headers can slip
+  the declared-size check; the free-space margin plus the ENOSPC backstop bound the damage.
+- **Regression test:** `security.test.ts` → "F7 — extraction is bounded" (entry-count cap, disk-fill
+  refusal, normal-archive pass, and the undeterminable-free-space path).
 
 ### F6 — Corrupt config.json (Informational, Accepted)
 
@@ -102,8 +139,38 @@ A malformed `config.json` surfaces as a raw `JSON.parse` error (caught by the to
 - F1 — plist XML escaping.
 - F2 — zip-slip containment (crafted malicious zip) + symlink-skip.
 - F3 — malformed-sidecar resilience.
+- F5 — newline-in-filename rejection (exiftool option-injection guard).
+- F7 — extraction bounds (entry-count cap, disk-fill refusal, free-space edge cases).
 
 Plus `test/network-audit.test.ts` fails the build if any network primitive is introduced.
+
+## 2026-07-12 follow-up audit
+
+**Method.** Full manual re-read of `src/`, `bin/`, `scripts/` plus an independent `codex` review
+(read-only sandbox) as a cross-check; every finding was verified against the code before acceptance,
+and each fix ships with a regression test. `bun test` and `tsc --noEmit` are green.
+
+**Security fixes:** F5 (newline/option injection — above) and F7 (decompression bomb — above).
+
+**Correctness fixes found in the same pass** (not vulnerabilities, but integrity/UX defects):
+
+- **Merge-failed files were imported as "done."** The pipeline imported every deduped item
+  regardless of whether its metadata merge succeeded, so a failed/again-skipped exiftool write could
+  land a photo in Apple Photos *without* the corrected date/GPS — reported as success. `mergeBatch`
+  now attributes success per file and returns an `importable` set; the pipeline imports only those
+  and counts the rest as failures. (`merge.ts`, `pipeline.ts`.)
+- **Partial Photos batch could duplicate on retry.** A chunk that partially imported was marked
+  wholly failed, so nothing was recorded and the next run re-imported the ones that *had* landed —
+  and `skip check duplicates true` meant Photos re-added them as duplicates. The import AppleScript
+  now returns a **per-file** status so exactly the confirmed files are recorded. (`sink/applephotos.ts`.)
+
+**Also hardened / cleaned:** `exiftoolBin()` (absolute-path resolver) is now actually used at both
+exiftool call sites; `status` prints the import counts it advertises; dead branches and a duplicated
+regex removed; dev-only `img/` sources untracked. See `HANDOFF.md` for the full change list.
+
+**Known lower-severity items left for a follow-up** (documented, not yet changed): the loopback
+`/recycle` endpoint has no CSRF nonce (short-lived, deletes only config/logs/DB, not photos); the
+stale-run-lock reclaim is a narrow TOCTOU; source archives are re-extracted/re-hashed on every run.
 
 ---
 
