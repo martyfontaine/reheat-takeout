@@ -12,6 +12,7 @@
  */
 import { mkdir, rm, cp, chmod, writeFile } from "fs/promises";
 import { join } from "path";
+import { signApp } from "./sign";
 
 const ROOT = join(import.meta.dir, "..");
 const APP = join(ROOT, "dist", "Reheat.app");
@@ -82,6 +83,9 @@ export REHEAT_RESOURCES="$RES"
 
   // 5. Classic PkgInfo (harmless; some tools still look for it).
   await writeFile(join(CONTENTS, "PkgInfo"), "APPL????");
+
+  // 6. Optional Developer ID signing — no-op unless REHEAT_SIGN_IDENTITY is set.
+  await signApp(APP, join(RES, "reheat"));
 
   console.log(`\nBuilt ${APP}`);
   return 0;

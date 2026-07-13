@@ -12,6 +12,7 @@
 import { mkdir, rm, symlink, writeFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
+import { notarizeAndStaple } from "./sign";
 
 const ROOT = join(import.meta.dir, "..");
 const DIST = join(ROOT, "dist");
@@ -161,6 +162,9 @@ async function main(): Promise<number> {
   await rm(RW, { force: true });
   await rm(bgSvg, { force: true });
   await rm(bgPng, { force: true });
+
+  // 7. Optional notarization + stapling — no-op unless REHEAT_NOTARY_PROFILE is set.
+  await notarizeAndStaple(FINAL);
 
   console.log(`\nBuilt ${FINAL}`);
   return 0;
