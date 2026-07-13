@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * PhotoBridge CLI entry point. Thin shim → src/cli.ts.
+ * Reheat CLI entry point. Thin shim → src/cli.ts.
  */
 import { main } from "../src/cli";
 

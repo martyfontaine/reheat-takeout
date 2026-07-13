@@ -1,8 +1,8 @@
-# PhotoBridge
+# Reheat
 
 **A macOS background daemon that turns Google Photos *Takeout* exports into a clean, metadata-correct import into Apple Photos** — so any app that can only read your local Apple Photos library (Gander and every other iOS-app-on-Mac, plus native Photos-reading apps) can finally see your Google Photos, with dates and locations intact.
 
-Set it up once. Drop a Takeout archive in a folder. PhotoBridge silently extracts it, re-attaches the true capture date + GPS + caption to every photo and video, dedupes anything already imported, and imports the result into Apple Photos. You never open Apple Photos again — it becomes invisible plumbing.
+Set it up once. Drop a Takeout archive in a folder. Reheat silently extracts it, re-attaches the true capture date + GPS + caption to every photo and video, dedupes anything already imported, and imports the result into Apple Photos. You never open Apple Photos again — it becomes invisible plumbing.
 
 ## Why this exists
 
@@ -13,7 +13,7 @@ Getting Google Photos into Apple Photos is blocked by two walls:
 
 The only sanctioned bulk path out is **Google Takeout** — but Takeout is notorious for breaking import: it strips capture dates, GPS, and captions out of the files and dumps them into sidecar `.json` files. Existing fixers (like GPTH) only repair the *filesystem* timestamp, **not the EXIF metadata Apple Photos actually reads** — so Photos still shows the wrong date.
 
-**PhotoBridge writes the true metadata back into each file's EXIF/QuickTime block *and* imports into Apple Photos *and* runs as a daemon** — collapsing three manual steps into zero. The metadata merge is the whole point, so it's built to be correct, not merely present.
+**Reheat writes the true metadata back into each file's EXIF/QuickTime block *and* imports into Apple Photos *and* runs as a daemon** — collapsing three manual steps into zero. The metadata merge is the whole point, so it's built to be correct, not merely present.
 
 ## Honest and transparent
 
@@ -30,42 +30,42 @@ Join us in learning, and we'll be with you every step of the way.
 - [exiftool](https://exiftool.org) — `brew install exiftool`
 - Apple Photos (built in)
 
-Run `photobridge doctor` to check everything at once.
+Run `reheat doctor` to check everything at once.
 
 ## Install
 
 ```sh
-git clone <this-repo> photobridge && cd photobridge
+git clone <this-repo> reheat && cd reheat
 bun install
-bun run bin/photobridge.ts doctor      # verify dependencies + permissions
-bun run bin/photobridge.ts init        # choose the watched inbox folder
-bun run bin/photobridge.ts install     # install the launchd agent
+bun run bin/reheat.ts doctor      # verify dependencies + permissions
+bun run bin/reheat.ts init        # choose the watched inbox folder
+bun run bin/reheat.ts install     # install the launchd agent
 ```
 
-`init` writes a config file (default `~/.config/photobridge/config.json`); `install` writes a launchd LaunchAgent that watches your inbox folder and runs PhotoBridge whenever an archive lands there.
+`init` writes a config file (default `~/.config/reheat/config.json`); `install` writes a launchd LaunchAgent that watches your inbox folder and runs Reheat whenever an archive lands there.
 
 ## Getting a Takeout archive
 
 1. Go to [takeout.google.com](https://takeout.google.com), deselect all, select **Google Photos**, and export.
-2. Choose `.zip` (or `.tgz`). Large libraries are split into multiple parts (`…-001.zip`, `…-002.zip`); download **all** parts into the inbox folder — PhotoBridge extracts every part before scanning.
+2. Choose `.zip` (or `.tgz`). Large libraries are split into multiple parts (`…-001.zip`, `…-002.zip`); download **all** parts into the inbox folder — Reheat extracts every part before scanning.
 3. Optionally set up Takeout's **scheduled export** (every 2 months) delivered to **Google Drive**, and let Google Drive for desktop sync it into your inbox folder — then imports happen with zero ongoing effort.
 
-Drop the archive(s) into your inbox folder. That's it. Watch progress with `photobridge logs`.
+Drop the archive(s) into your inbox folder. That's it. Watch progress with `reheat logs`.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `photobridge init` | Interactively set the watched inbox folder and timezone; write config |
-| `photobridge install` | Install the launchd LaunchAgent (watches the inbox) |
-| `photobridge uninstall` | Remove the LaunchAgent |
-| `photobridge run` | Process any Takeout archives currently in the inbox |
-| `photobridge run --dry-run` | Report what *would* be imported without touching Apple Photos |
-| `photobridge status` | Show agent load state and import counts |
-| `photobridge logs` | Print recent structured log lines |
-| `photobridge doctor` | Check dependencies and Apple Photos automation permission |
-| `photobridge icloud status` | Read the actual iCloud Photos setting (definitive, via UI automation) |
-| `photobridge icloud on/off` | Toggle iCloud Photos — confirmation dialogs are left for you to answer |
+| `reheat init` | Interactively set the watched inbox folder and timezone; write config |
+| `reheat install` | Install the launchd LaunchAgent (watches the inbox) |
+| `reheat uninstall` | Remove the LaunchAgent |
+| `reheat run` | Process any Takeout archives currently in the inbox |
+| `reheat run --dry-run` | Report what *would* be imported without touching Apple Photos |
+| `reheat status` | Show agent load state and import counts |
+| `reheat logs` | Print recent structured log lines |
+| `reheat doctor` | Check dependencies and Apple Photos automation permission |
+| `reheat icloud status` | Read the actual iCloud Photos setting (definitive, via UI automation) |
+| `reheat icloud on/off` | Toggle iCloud Photos — confirmation dialogs are left for you to answer |
 
 ## Permissions
 
@@ -74,23 +74,23 @@ On first run macOS will prompt for:
 - **Automation** — allow your terminal / Bun to control Photos (System Settings ▸ Privacy & Security ▸ Automation). Required to import.
 - **Full Disk Access** may be needed for your terminal depending on where your inbox lives.
 
-`photobridge doctor` detects the Automation permission and tells you exactly how to grant it if it's missing.
+`reheat doctor` detects the Automation permission and tells you exactly how to grant it if it's missing.
 
 ## Controlling iCloud Photos
 
-Apple provides **no API** for the iCloud Photos setting — no `defaults` key, no AppleScript command — and on modern macOS the Settings toggle is a SwiftUI control that isn't exposed to another app's accessibility automation, so it **cannot be flipped programmatically** in a way that survives macOS versions. PhotoBridge is honest about this:
+Apple provides **no API** for the iCloud Photos setting — no `defaults` key, no AppleScript command — and on modern macOS the Settings toggle is a SwiftUI control that isn't exposed to another app's accessibility automation, so it **cannot be flipped programmatically** in a way that survives macOS versions. Reheat is honest about this:
 
-- **`photobridge icloud status`** reports the state from a **passive filesystem heuristic** (cloud-sync artifacts in the system library). It's version-independent, needs **no permissions**, and prints e.g. *"iCloud Photos appears ON (cloud-sync artifacts active today)."*
-- **`photobridge icloud on|off`** opens the exact **Photos ▸ Settings ▸ iCloud** pane for you and tells you which way to flip the *"Sync this Mac"* toggle. **PhotoBridge never flips it itself** — which also keeps the consequential decision (below) with you. Opening the pane needs **Accessibility** for your terminal; if that's not granted it tells you to open the pane yourself.
+- **`reheat icloud status`** reports the state from a **passive filesystem heuristic** (cloud-sync artifacts in the system library). It's version-independent, needs **no permissions**, and prints e.g. *"iCloud Photos appears ON (cloud-sync artifacts active today)."*
+- **`reheat icloud on|off`** opens the exact **Photos ▸ Settings ▸ iCloud** pane for you and tells you which way to flip the *"Sync this Mac"* toggle. **Reheat never flips it itself** — which also keeps the consequential decision (below) with you. Opening the pane needs **Accessibility** for your terminal; if that's not granted it tells you to open the pane yourself.
 - **The physics that matters:** iCloud Photos is whole-library sync. Toggling off, importing, then back on does **not** keep those imports out of iCloud — they upload when you re-enable. What the toggle genuinely enables is the **import → curate → then sync** workflow: turn it off, import a Takeout, delete the junk in Photos, turn it back on — only the survivors ever upload.
-- **The sharp edge:** turning iCloud Photos **off** on an "Optimize Mac Storage" setup can prompt to download originals — potentially your entire cloud library. Because PhotoBridge leaves the toggle to you, that decision is always yours to make in the Photos window.
+- **The sharp edge:** turning iCloud Photos **off** on an "Optimize Mac Storage" setup can prompt to download originals — potentially your entire cloud library. Because Reheat leaves the toggle to you, that decision is always yours to make in the Photos window.
 - **The daemon never touches this.** Only the interactive `icloud` command opens any UI. The `run`/daemon path uses only the passive heuristic to *warn* when iCloud Photos looks enabled (`warnIfICloudOn` in config, default `true`).
 
 ## Caveats — read before importing a large library
 
 - **~2× storage.** Apple Photos **copies** originals into its own library on import, so importing an N-GB Takeout uses roughly another N GB on the disk that holds your Photos library. Make sure you have the headroom.
-- **iCloud Photos.** If iCloud Photos is on, everything PhotoBridge imports will upload to iCloud and count against your iCloud storage. Turn iCloud Photos off first if you don't want that.
-- **Timezone.** Google stores capture time as a UTC epoch with no original timezone. PhotoBridge renders the EXIF wall-clock in a configured display timezone (default: your Mac's timezone) and also writes an explicit `OffsetTimeOriginal` tag. Set `displayTimeZone` in the config if you want a fixed zone.
+- **iCloud Photos.** If iCloud Photos is on, everything Reheat imports will upload to iCloud and count against your iCloud storage. Turn iCloud Photos off first if you don't want that.
+- **Timezone.** Google stores capture time as a UTC epoch with no original timezone. Reheat renders the EXIF wall-clock in a configured display timezone (default: your Mac's timezone) and also writes an explicit `OffsetTimeOriginal` tag. Set `displayTimeZone` in the config if you want a fixed zone.
 - **Albums.** v1 dedupes by content and does **not** reconstruct Google Photos albums inside Apple Photos (planned for v2).
 - **One direction.** v1 is Takeout → Apple Photos only. Apple → Google is out of scope for v1.
 
@@ -108,11 +108,11 @@ inbox archive → extract → scan → match sidecar → hash (original bytes)
 
 ## Privacy
 
-PhotoBridge is **local-first and makes no outbound network connections.** It never contacts Google or any other host — the only cloud involved is Google's own Takeout, which *you* initiate. (There's a test that fails the build if any network-call primitive appears in the source.)
+Reheat is **local-first and makes no outbound network connections.** It never contacts Google or any other host — the only cloud involved is Google's own Takeout, which *you* initiate. (There's a test that fails the build if any network-call primitive appears in the source.)
 
 ## Security
 
-PhotoBridge has undergone a security audit ([`SECURITY_AUDIT.md`](./SECURITY_AUDIT.md)) covering command injection, archive path-traversal (zip-slip), symlink handling, AppleScript/SQL injection, and network egress — including adversarial testing with hand-crafted malicious archives. No critical or high-severity vulnerabilities were found. To report a vulnerability, see [`SECURITY.md`](./SECURITY.md).
+Reheat has undergone a security audit ([`SECURITY_AUDIT.md`](./SECURITY_AUDIT.md)) covering command injection, archive path-traversal (zip-slip), symlink handling, AppleScript/SQL injection, and network egress — including adversarial testing with hand-crafted malicious archives. No critical or high-severity vulnerabilities were found. To report a vulnerability, see [`SECURITY.md`](./SECURITY.md).
 
 ## Development
 

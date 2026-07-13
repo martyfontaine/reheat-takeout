@@ -130,7 +130,7 @@ export async function run(cfg: Config, logger: Logger, opts: RunOptions): Promis
       if (ic.state === "likely-on") {
         await logger.warn("icloud.likely_on", {
           detail: ic.detail,
-          note: "imports will upload to iCloud and count against its storage — see README; check with 'photobridge icloud status'",
+          note: "imports will upload to iCloud and count against its storage — see README; check with 'reheat icloud status'",
         });
       }
     }

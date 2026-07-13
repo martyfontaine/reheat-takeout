@@ -65,22 +65,22 @@ async function automationCheck(): Promise<Check> {
 /**
  * Best-effort iCloud Photos detection (ISC-54). Uses the passive filesystem
  * heuristic (cloud-sync artifacts in the system library). Definitive state is
- * available via the user-invoked `photobridge icloud status` (UI automation).
+ * available via the user-invoked `reheat icloud status` (UI automation).
  */
 async function iCloudCheck(): Promise<Check> {
   const ic = heuristicICloudEnabled();
   const detail =
     ic.state === "likely-on"
-      ? `appears ENABLED (${ic.detail}) — imports will upload to iCloud and count against its storage (see README; definitive: 'photobridge icloud status')`
+      ? `appears ENABLED (${ic.detail}) — imports will upload to iCloud and count against its storage (see README; definitive: 'reheat icloud status')`
       : ic.state === "likely-off"
-        ? `appears OFF (${ic.detail}) — definitive: 'photobridge icloud status'`
-        : `${ic.detail} — if iCloud Photos is ON, imports upload to iCloud (definitive: 'photobridge icloud status')`;
+        ? `appears OFF (${ic.detail}) — definitive: 'reheat icloud status'`
+        : `${ic.detail} — if iCloud Photos is ON, imports upload to iCloud (definitive: 'reheat icloud status')`;
   return { name: "iCloud Photos", ok: true, detail }; // informational — never fails the run
 }
 
 async function configCheck(): Promise<Check> {
   if (!configExists()) {
-    return { name: "config", ok: false, detail: `not found — run 'photobridge init' (${configPath()})` };
+    return { name: "config", ok: false, detail: `not found — run 'reheat init' (${configPath()})` };
   }
   const cfg = await loadConfig();
   return { name: "config", ok: true, detail: `inbox=${cfg?.inboxDir}` };

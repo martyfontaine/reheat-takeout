@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-If you believe you've found a security issue in PhotoBridge, please report it
+If you believe you've found a security issue in Reheat, please report it
 **privately** rather than opening a public issue:
 
 - Use GitHub's **[Report a vulnerability](https://docs.github.com/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)**
@@ -15,7 +15,7 @@ few days.
 
 ## Design notes relevant to security
 
-PhotoBridge is **local-first** and intentionally small in attack surface:
+Reheat is **local-first** and intentionally small in attack surface:
 
 - **No network.** It makes no outbound connections; a test fails the build if any
   network primitive is introduced. The only cloud involved is Google Takeout,
@@ -31,10 +31,10 @@ See [`SECURITY_AUDIT.md`](./SECURITY_AUDIT.md) for the full audit.
 ## Keeping your install safe
 
 - Keep **exiftool** updated (`brew upgrade exiftool`) — it parses untrusted media.
-  `photobridge doctor` reports your installed version.
+  `reheat doctor` reports your installed version.
 - Only drop archives you obtained yourself (your own Google Takeout) into the
   watched inbox.
 
 ## Supported versions
 
-PhotoBridge is pre-1.0; security fixes land on the latest `main`.
+Reheat is pre-1.0; security fixes land on the latest `main`.

@@ -25,7 +25,7 @@ export interface Config {
 export function configHome(): string {
   const xdg = process.env.XDG_CONFIG_HOME;
   const base = xdg && xdg.length > 0 ? xdg : join(homedir(), ".config");
-  return join(base, "photobridge");
+  return join(base, "reheat");
 }
 
 export function configPath(): string {
@@ -35,7 +35,7 @@ export function configPath(): string {
 export function dataHome(): string {
   const xdg = process.env.XDG_DATA_HOME;
   const base = xdg && xdg.length > 0 ? xdg : join(homedir(), ".local", "share");
-  return join(base, "photobridge");
+  return join(base, "reheat");
 }
 
 /** Best-effort host timezone; falls back to UTC. */
@@ -50,10 +50,10 @@ export function hostTimeZone(): string {
 export function defaultConfig(): Config {
   const data = dataHome();
   return {
-    inboxDir: join(homedir(), "PhotoBridge", "Inbox"),
+    inboxDir: join(homedir(), "Reheat"),
     workDir: join(data, "work"),
     dbPath: join(data, "state.sqlite"),
-    logPath: join(data, "photobridge.log"),
+    logPath: join(data, "reheat.log"),
     displayTimeZone: hostTimeZone(),
     warnIfICloudOn: true,
   };

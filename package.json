@@ -1,5 +1,5 @@
 {
-  "name": "photobridge",
+  "name": "reheat",
   "version": "0.1.0",
   "description": "macOS daemon that imports Google Takeout into Apple Photos — metadata-correct.",
   "keywords": [
@@ -17,7 +17,7 @@
   "type": "module",
   "license": "MIT",
   "bin": {
-    "photobridge": "bin/photobridge.ts"
+    "reheat": "bin/reheat.ts"
   },
   "files": [
     "bin",
@@ -26,7 +26,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "photobridge": "bun run bin/photobridge.ts",
+    "reheat": "bun run bin/reheat.ts",
+    "build:app": "bun run scripts/build-app.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },

@@ -1,6 +1,6 @@
 /**
  * Structured JSONL logging. Every run appends to a single file surfaced by
- * `photobridge logs` (ISC-52).
+ * `reheat logs` (ISC-52).
  */
 import { appendFile, mkdir } from "fs/promises";
 import { dirname } from "path";

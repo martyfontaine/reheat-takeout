@@ -9,7 +9,7 @@
  * Robust, honest design:
  *  - `status`   → a passive filesystem heuristic (version-independent, no perms).
  *  - `on`/`off` → open the exact Photos ▸ Settings ▸ iCloud pane FOR the user and
- *    guide the single click. PhotoBridge never flips the setting itself — which
+ *    guide the single click. Reheat never flips the setting itself — which
  *    also keeps the consequential "download originals?" decision with the human.
  *  - The daemon/run path NEVER launches UI automation (ISC-64 Anti); it only uses
  *    the passive heuristic to warn.
@@ -98,7 +98,7 @@ export interface ICloudResult {
   heuristic: HeuristicState;
   /** on/off: whether the Settings pane was opened for the user. */
   paneOpened: boolean;
-  /** on/off: PhotoBridge never flips the setting; the user makes the final click. */
+  /** on/off: Reheat never flips the setting; the user makes the final click. */
   manualRequired: boolean;
   message: string;
 }
@@ -150,7 +150,7 @@ export async function runICloudAction(action: ICloudAction): Promise<ICloudResul
   }
   msg +=
     "\n(Apple exposes no stable programmatic handle for this toggle on modern macOS, " +
-    "so PhotoBridge opens the pane and leaves the one click to you.)";
+    "so Reheat opens the pane and leaves the one click to you.)";
 
   return { ok: true, action, heuristic: h.state, paneOpened: opened, manualRequired: true, message: msg };
 }

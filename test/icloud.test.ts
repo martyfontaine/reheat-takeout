@@ -54,7 +54,7 @@ describe("heuristicICloudEnabled (ISC-62 passive detection)", () => {
 describe("icloud CLI validation (no UI launched on bad input)", () => {
   test("invalid subaction exits 2 with usage", async () => {
     const proc = Bun.spawn(
-      ["bun", "run", join(import.meta.dir, "..", "bin", "photobridge.ts"), "icloud", "bogus"],
+      ["bun", "run", join(import.meta.dir, "..", "bin", "reheat.ts"), "icloud", "bogus"],
       { stdout: "pipe", stderr: "pipe" },
     );
     const [err, code] = await Promise.all([new Response(proc.stderr).text(), proc.exited]);
@@ -64,7 +64,7 @@ describe("icloud CLI validation (no UI launched on bad input)", () => {
 
   test("missing subaction exits 2", async () => {
     const proc = Bun.spawn(
-      ["bun", "run", join(import.meta.dir, "..", "bin", "photobridge.ts"), "icloud"],
+      ["bun", "run", join(import.meta.dir, "..", "bin", "reheat.ts"), "icloud"],
       { stdout: "pipe", stderr: "pipe" },
     );
     const code = await proc.exited;
@@ -73,7 +73,7 @@ describe("icloud CLI validation (no UI launched on bad input)", () => {
 
   test("status is pure heuristic — exits 0, no UI, no permissions", async () => {
     const proc = Bun.spawn(
-      ["bun", "run", join(import.meta.dir, "..", "bin", "photobridge.ts"), "icloud", "status"],
+      ["bun", "run", join(import.meta.dir, "..", "bin", "reheat.ts"), "icloud", "status"],
       { stdout: "pipe", stderr: "pipe" },
     );
     const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);

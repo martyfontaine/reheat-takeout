@@ -21,10 +21,10 @@ import * as daemon from "./daemon";
 
 const VERSION = "0.1.0";
 
-const USAGE = `photobridge ${VERSION} — Google Takeout → Apple Photos, metadata-correct.
+const USAGE = `reheat ${VERSION} — Google Takeout → Apple Photos, metadata-correct.
 
 USAGE
-  photobridge <command> [options]
+  reheat <command> [options]
 
 COMMANDS
   onboard      One-shot human setup: make the Reheat drop folder, install the
@@ -44,7 +44,7 @@ OPTIONS
   -h, --help   Show this help
   --version    Show version
 
-Config lives at ${configPath()}. PhotoBridge makes no outbound network connections.`;
+Config lives at ${configPath()}. Reheat makes no outbound network connections.`;
 
 async function ensureConfig(): Promise<Config> {
   return (await loadConfig()) ?? defaultConfig();
@@ -63,7 +63,7 @@ async function cmdInit(): Promise<number> {
   console.log(`Wrote config → ${configPath()}`);
   console.log(`  inbox:    ${cfg.inboxDir}`);
   console.log(`  timezone: ${cfg.displayTimeZone}`);
-  console.log(`Next: 'photobridge install' to start the daemon.`);
+  console.log(`Next: 'reheat install' to start the daemon.`);
   return 0;
 }
 
@@ -166,7 +166,7 @@ async function cmdLogs(): Promise<number> {
 
 async function cmdICloud(sub: string | undefined): Promise<number> {
   if (sub !== "status" && sub !== "on" && sub !== "off") {
-    console.error("Usage: photobridge icloud <status|on|off>");
+    console.error("Usage: reheat icloud <status|on|off>");
     console.error("  status  Report whether iCloud Photos looks on (passive, no permissions needed)");
     console.error("  on/off  Open Photos ▸ Settings ▸ iCloud and guide the toggle — you make the click");
     return 2;

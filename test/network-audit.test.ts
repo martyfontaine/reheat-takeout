@@ -15,7 +15,7 @@ function walkTs(dir: string): string[] {
 }
 
 /**
- * ISC-58 (Anti): PhotoBridge makes no outbound network connection. We audit the
+ * ISC-58 (Anti): Reheat makes no outbound network connection. We audit the
  * source for network-call PRIMITIVES — not bare URL strings (the plist DOCTYPE
  * URL is a harmless standard string, never fetched).
  */

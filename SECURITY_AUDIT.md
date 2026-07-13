@@ -1,8 +1,8 @@
-# PhotoBridge — Security Audit
+# Reheat — Security Audit
 
 | | |
 |---|---|
-| **Project** | PhotoBridge v0.1.0 |
+| **Project** | Reheat v0.1.0 |
 | **Date** | 2026-07-11 |
 | **Scope** | Full source tree (`src/`, `bin/`), extraction/import pipeline, launchd integration |
 | **Method** | Static review of the complete attack surface + **empirical adversarial testing** (hand-crafted malicious archives and injection payloads run through the real code paths) + regression tests |
@@ -14,13 +14,13 @@ This audit was performed on the code itself and is complemented by an earlier in
 
 ## Threat model
 
-**Trust boundaries.** PhotoBridge treats the following as **untrusted**:
+**Trust boundaries.** Reheat treats the following as **untrusted**:
 - Any archive dropped in the watched inbox (a `.zip`/`.tgz` — not necessarily a real Google Takeout).
 - Sidecar `.json` files, media files, and **filenames** inside an archive.
 
 **Trusted:** the user's own config file, the user's machine and account.
 
-**Assets at risk:** the user's photos, their Apple Photos library, and the local filesystem. PhotoBridge handles **no credentials, API keys, tokens, or secrets**, and makes **no network connections**, which removes entire categories of risk (credential theft, SSRF, data exfiltration) by design.
+**Assets at risk:** the user's photos, their Apple Photos library, and the local filesystem. Reheat handles **no credentials, API keys, tokens, or secrets**, and makes **no network connections**, which removes entire categories of risk (credential theft, SSRF, data exfiltration) by design.
 
 **Primary attacker model:** a maliciously-crafted archive processed by the pipeline (hostile entry paths, symlinks, filenames, or sidecar contents). Note that placing a file in the inbox already requires local write access to the user's account — a meaningful pre-condition.
 
@@ -63,7 +63,7 @@ These common vulnerability classes were checked and found **not exploitable** by
 
 ### F2 — Archive extraction path traversal (High if present — Verified NOT vulnerable)
 
-PhotoBridge extracts **untrusted** archives with `ditto -x -k` (zip) and `tar -xzf` (tgz). A zip-slip archive (entries like `../../escape.txt`) could, in a naive extractor, write outside the staging directory and overwrite arbitrary files.
+Reheat extracts **untrusted** archives with `ditto -x -k` (zip) and `tar -xzf` (tgz). A zip-slip archive (entries like `../../escape.txt`) could, in a naive extractor, write outside the staging directory and overwrite arbitrary files.
 
 **This was tested adversarially, not assumed:**
 - A `.tgz` whose member was renamed to `../../escapecheck/PWNED.txt` → `tar` **refused** it: `Path contains '..'` (fail-closed), nothing escaped.
@@ -82,13 +82,13 @@ PhotoBridge extracts **untrusted** archives with `ditto -x -k` (zip) and `tar -x
 
 ### F4 — exiftool parser exposure (Informational, Documented)
 
-exiftool parses untrusted media and has historically had parser CVEs (e.g. CVE-2021-22204, DjVu RCE). PhotoBridge cannot eliminate this — exiftool *is* the metadata engine — but:
+exiftool parses untrusted media and has historically had parser CVEs (e.g. CVE-2021-22204, DjVu RCE). Reheat cannot eliminate this — exiftool *is* the metadata engine — but:
 - `doctor` now reports the installed exiftool **version** with a reminder to keep it current.
 - Recommendation: users on outdated exiftool should update (`brew upgrade exiftool`).
 
 ### F5 — Filename interpreted as an exiftool option (Low, Mitigated)
 
-exiftool arg-files treat each line as one argument; a media file named `-something.jpg` could in principle be read as an option rather than a target. **Mitigated** because PhotoBridge always writes **absolute** paths (derived from the extraction root), which begin with `/` and are unambiguously filenames. No action required; noted for future maintainers who might introduce relative paths.
+exiftool arg-files treat each line as one argument; a media file named `-something.jpg` could in principle be read as an option rather than a target. **Mitigated** because Reheat always writes **absolute** paths (derived from the extraction root), which begin with `/` and are unambiguously filenames. No action required; noted for future maintainers who might introduce relative paths.
 
 ### F6 — Corrupt config.json (Informational, Accepted)
 
@@ -111,13 +111,13 @@ Plus `test/network-audit.test.ts` fails the build if any network primitive is in
 
 1. **Keep exiftool updated** — it is the one component parsing untrusted binary input.
 2. **Extraction safety is platform-provided** — verified on macOS via `ditto`/`tar`; the regression test guards against regressions or extractor swaps.
-3. **Inbox is a trust boundary** — anything with write access to the inbox can trigger runs. This matches the local-first, single-user model; document it if PhotoBridge is ever run in a shared context.
+3. **Inbox is a trust boundary** — anything with write access to the inbox can trigger runs. This matches the local-first, single-user model; document it if Reheat is ever run in a shared context.
 4. **v0.2 robustness items** (from the cross-vendor review): per-file import to avoid partial-chunk re-import, and a multipart settle-check. These are availability/correctness refinements, not security vulnerabilities.
 
 ---
 
 ## Conclusion
 
-PhotoBridge is **sound from a security standpoint** for its intended local-first, single-user use. It avoids injection by construction (array-spawn, parameterized SQL, argv-based AppleScript), performs no network I/O, handles no secrets, and its highest-risk operation — extracting untrusted archives — was **empirically verified** to be contained by both the platform extractors and a symlink-safe scanner. The two genuine defects found (plist escaping, malformed-sidecar handling) are fixed and regression-tested.
+Reheat is **sound from a security standpoint** for its intended local-first, single-user use. It avoids injection by construction (array-spawn, parameterized SQL, argv-based AppleScript), performs no network I/O, handles no secrets, and its highest-risk operation — extracting untrusted archives — was **empirically verified** to be contained by both the platform extractors and a symlink-safe scanner. The two genuine defects found (plist escaping, malformed-sidecar handling) are fixed and regression-tested.
 
 *No critical or high-severity vulnerabilities were identified.*

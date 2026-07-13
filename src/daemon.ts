@@ -18,16 +18,16 @@ function sanitize(s: string): string {
 
 export function agentLabel(): string {
   const user = process.env.USER || userInfo().username || "user";
-  return `com.${sanitize(user)}.photobridge`;
+  return `com.${sanitize(user)}.reheat`;
 }
 
 export function plistPath(): string {
   return join(homedir(), "Library", "LaunchAgents", agentLabel() + ".plist");
 }
 
-/** Absolute path to bin/photobridge.ts (this module lives in src/). */
+/** Absolute path to bin/reheat.ts (this module lives in src/). */
 export function scriptPath(): string {
-  return join(import.meta.dir, "..", "bin", "photobridge.ts");
+  return join(import.meta.dir, "..", "bin", "reheat.ts");
 }
 
 /**
@@ -44,7 +44,7 @@ function isCompiledBinary(): boolean {
 
 /**
  * The ProgramArguments launchd should exec (ISC-49). In dev we run the TypeScript
- * entry under Bun: `bun <bin/photobridge.ts> run`. A compiled binary, however, gets
+ * entry under Bun: `bun <bin/reheat.ts> run`. A compiled binary, however, gets
  * a synthetic `/$bunfs/...` script path injected as argv[1]; passing that through
  * would make the CLI read it as the subcommand and every drop would fail, so we
  * exec the binary itself with just `run`.
