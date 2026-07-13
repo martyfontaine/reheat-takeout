@@ -58,11 +58,18 @@
       <small>Reheat.dmg · latest release · Apple Silicon &amp; Intel</small>
     </a>
     <p class="meta">Free &amp; open source · macOS 12+ · no account, no network</p>
+    <p class="meta"><strong>Unsigned beta</strong> — the first open takes one extra step (below). A signed, notarized build is on the way.</p>
   </section>
 
   <div class="grid">
     <div class="card">
-      <h2>Install</h2>
+      <h2>Install with Homebrew</h2>
+      <p>Easiest if you use <a href="https://brew.sh">Homebrew</a> — this also installs <code>exiftool</code> (a dependency) for you, and <code>--no-quarantine</code> skips the unsigned-app block:</p>
+      <p><code>brew install --cask --no-quarantine martyfontaine/tap/reheat</code></p>
+    </div>
+
+    <div class="card">
+      <h2>Or install the DMG by hand</h2>
       <ol class="steps">
         <li>Open <strong>Reheat.dmg</strong> and drag <strong>Reheat</strong> onto <strong>Applications</strong>.</li>
         <li>First launch is blocked (unsigned build): open it once, then in <strong>System Settings ▸ Privacy &amp; Security</strong> click <strong>Open Anyway</strong>. (See below.)</li>
@@ -78,6 +85,7 @@
       <p>Try to open Reheat once, then go to <strong>System Settings ▸ Privacy &amp; Security</strong>,
       scroll to the Security section, and click <strong>Open Anyway</strong>.</p>
       <p>Prefer Terminal? Run <code>xattr -dr com.apple.quarantine /Applications/Reheat.app</code>, then open it.</p>
+      <p><em>A signed &amp; notarized build is in progress — once it ships, this step goes away.</em></p>
     </div>
 
     <div class="card">

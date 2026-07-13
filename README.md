@@ -23,6 +23,24 @@ Plenty of tools promise one-click magic and quietly cut corners to fake it — a
 
 Join us in learning, and we'll be with you every step of the way.
 
+## Get Reheat
+
+> **Beta — unsigned build.** Reheat isn't notarized by Apple yet, so macOS shows a Gatekeeper
+> warning the first time you open it, and opening it takes one extra step (below). A signed +
+> notarized build is **the permanent fix and it's in progress** — that friction goes away once it ships.
+
+**Homebrew** (easiest — also installs `exiftool` for you):
+
+```sh
+brew install --cask --no-quarantine martyfontaine/tap/reheat
+```
+
+`--no-quarantine` tells macOS to skip the Gatekeeper block for this unsigned build; you won't need it once Reheat is notarized.
+
+**Or download the DMG** from the [latest release](https://github.com/martyfontaine/reheat-takeout/releases/latest). Drag Reheat onto Applications, then — because it's unsigned — try to open it once, go to **System Settings ▸ Privacy & Security**, and click **Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/Reheat.app`). You'll also need [exiftool](https://exiftool.org): `brew install exiftool`.
+
+*(On macOS 15+ the first-open dialog only offers "Move to Trash" — that's expected for any unsigned app, not a real malware detection. The old right-click → Open shortcut no longer works there.)*
+
 ## Requirements
 
 - macOS (Apple Silicon or Intel)
@@ -32,7 +50,7 @@ Join us in learning, and we'll be with you every step of the way.
 
 Run `reheat doctor` to check everything at once.
 
-## Install
+## Install from source (developers)
 
 ```sh
 git clone <this-repo> reheat && cd reheat
