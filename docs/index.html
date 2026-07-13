@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reheat — restore the metadata Google Takeout strips</title>
+<meta name="description" content="Reheat puts photoTakenTime and geoData back onto your Google Takeout photos and videos, then imports them into Apple Photos. Local-first, open source, free.">
+<style>
+  :root{
+    --amber:#F4A85C; --red:#CB1C22; --cream:#FFF3E4;
+    --ink:#2a1a12; --muted:#7a5c48; --card:#fffaf3; --line:#f0d8bd;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    color:var(--ink); background:var(--cream);
+    -webkit-font-smoothing:antialiased; line-height:1.55;
+  }
+  .wrap{max-width:680px; margin:0 auto; padding:clamp(28px,6vw,72px) 22px 56px}
+  .hero{text-align:center}
+  .cup{font-size:clamp(64px,16vw,104px); line-height:1; margin:0 0 6px}
+  h1{font-size:clamp(34px,7vw,52px); margin:.1em 0 .1em; letter-spacing:-.02em}
+  .tag{font-size:clamp(16px,3.4vw,20px); color:var(--muted); margin:0 auto 30px; max-width:30ch}
+  .dl{
+    display:inline-block; background:linear-gradient(135deg,var(--amber),var(--red));
+    color:#fff; text-decoration:none; font-weight:700; font-size:19px;
+    padding:16px 34px; border-radius:14px; box-shadow:0 8px 22px rgba(203,28,34,.28);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .dl:hover{transform:translateY(-2px); box-shadow:0 12px 28px rgba(203,28,34,.34)}
+  .dl small{display:block; font-weight:500; font-size:12.5px; opacity:.9; margin-top:2px}
+  .meta{color:var(--muted); font-size:14px; margin:14px 0 0}
+  .grid{display:grid; gap:14px; margin:44px 0 0}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px}
+  .card h2{font-size:15px; margin:0 0 6px; text-transform:uppercase; letter-spacing:.06em; color:var(--red)}
+  .card p{margin:0; font-size:15px; color:#4a3527}
+  code{background:#f3e2cd; padding:2px 7px; border-radius:6px; font-size:13px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; word-break:break-all}
+  .steps{counter-reset:s; list-style:none; padding:0; margin:0}
+  .steps li{position:relative; padding:6px 0 6px 34px; font-size:15px}
+  .steps li::before{counter-increment:s; content:counter(s); position:absolute; left:0; top:5px;
+    width:22px; height:22px; border-radius:50%; background:var(--amber); color:#fff;
+    font-size:12px; font-weight:700; display:grid; place-items:center}
+  footer{text-align:center; color:var(--muted); font-size:13px; margin:46px 0 0}
+  footer a{color:var(--red); text-decoration:none}
+  .sha{font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <div class="cup">🥡</div>
+    <h1>Reheat</h1>
+    <p class="tag">Google Takeout strips your photos. Reheat puts the metadata back.</p>
+    <a class="dl" href="https://github.com/martyfontaine/reheat-takeout/releases/latest/download/Reheat.dmg">
+      Download for macOS
+      <small>Reheat.dmg · v0.1.0 · Apple Silicon &amp; Intel</small>
+    </a>
+    <p class="meta">Free &amp; open source · macOS 12+ · no account, no network</p>
+  </section>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Install</h2>
+      <ol class="steps">
+        <li>Open <strong>Reheat.dmg</strong> and drag <strong>Reheat</strong> onto <strong>Applications</strong>.</li>
+        <li>First launch: <strong>right-click Reheat → Open → Open</strong> (it's an unsigned build — see below).</li>
+        <li>Install exiftool if you haven't: <code>brew install exiftool</code>.</li>
+        <li>Drop a Google Takeout <code>.zip</code> into the <code>~/Reheat</code> folder it makes.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>Unsigned build — Gatekeeper</h2>
+      <p>This build isn't code-signed/notarized yet, so macOS warns on first open. Right-click → Open, or run:
+      <br><code>xattr -dr com.apple.quarantine /Applications/Reheat.app</code></p>
+    </div>
+
+    <div class="card">
+      <h2>Verify your download</h2>
+      <p><code>shasum -a 256 Reheat.dmg</code></p>
+      <p class="sha">051859f3f9a3241ef5b80090c055e0da71c593702efc2395487d920316e8e021</p>
+    </div>
+  </div>
+
+  <footer>
+    <p><a href="https://github.com/martyfontaine/reheat-takeout">Source on GitHub</a> · MIT licensed · Take the Power Back</p>
+  </footer>
+</div>
+</body>
+</html>
